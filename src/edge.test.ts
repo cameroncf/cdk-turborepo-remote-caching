@@ -35,6 +35,7 @@ describe('Init Config', () => {
     const ssmParamName = 'foo';
     const result = await initTokenConfig(ssmParamName, {
       tokenStorage: TokenStorage.PARAMETER_STORE,
+      remoteApiEndpoint: 'foo',
     });
     expect(result).toBe(false);
   });

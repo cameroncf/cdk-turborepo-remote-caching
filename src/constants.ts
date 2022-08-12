@@ -10,10 +10,6 @@ export const TOKEN_CONFIG_NAME = 'TOKEN_CONFIG';
  *  Used to store token when token is stored directly in param store.
  */
 export const TOKEN_VALUE_NAME = 'TOKEN_VALUE';
-/**
- *  Used to store API endpoint for turborepo.
- */
-export const REMOTE_API_ENDPOINT = 'REMOTE_API_ENDPOINT';
 
 /**
  *
@@ -29,4 +25,5 @@ export enum TokenStorage {
  */
 export type TokenConfig = {
   tokenStorage: TokenStorage;
+  remoteApiEndpoint: string;
 };

@@ -14,7 +14,6 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import {
-  REMOTE_API_ENDPOINT,
   SSM_PARAMETER_NAMESPACE,
   TokenConfig,
   TokenStorage,
@@ -120,36 +119,6 @@ export class TurborepoRemoteCaching extends Construct {
 
     /***************************************************************************
      *
-     *  TOKEN CONFIG
-     *
-     *  Store the configuration for how the token is being stored that the
-     *  lambda can discover it later.
-     *
-     **************************************************************************/
-
-    const tokenConfig: TokenConfig = {
-      tokenStorage,
-    };
-
-    const tokenConfigParam = new StringParameter(this, 'TokenConfig', {
-      description:
-        'GENERATED VALUE DO NOT CHANGE - Configuration for TurboRepo Support',
-      parameterName: `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`,
-      stringValue: JSON.stringify(tokenConfig),
-    });
-    authorizer.addToRolePolicy(
-      new aws_iam.PolicyStatement({
-        actions: [
-          'ssm:GetParametersByPath',
-          'ssm:GetParameters',
-          'ssm:GetParameter',
-        ],
-        resources: [tokenConfigParam.parameterArn],
-      }),
-    );
-
-    /***************************************************************************
-     *
      *  API TOKEN
      *
      *  This defines the token used by the TurboRepo CLI. It goes into param
@@ -231,11 +200,35 @@ export class TurborepoRemoteCaching extends Construct {
       },
     });
 
-    new StringParameter(this, 'apiEndpoint', {
+    /***************************************************************************
+     *
+     *  TOKEN CONFIG
+     *
+     *  Store the configuration for how the token is being stored so that the
+     *  lambda (and CI tooling) can discover it later.
+     *
+     **************************************************************************/
+
+    const tokenConfig: TokenConfig = {
+      tokenStorage,
+      remoteApiEndpoint: `https://${distribution.distributionDomainName}`,
+    };
+
+    const tokenConfigParam = new StringParameter(this, 'TokenConfig', {
       description:
-        'GENERATED VALUE DO NOT CHANGE - API Endpoint Value for TurboRepo Support',
-      parameterName: `${SSM_PARAMETER_NAMESPACE}/${REMOTE_API_ENDPOINT}`,
-      stringValue: `https://${distribution.distributionDomainName}`,
+        'GENERATED VALUE DO NOT CHANGE - Configuration for TurboRepo Support',
+      parameterName: `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`,
+      stringValue: JSON.stringify(tokenConfig),
     });
+    authorizer.addToRolePolicy(
+      new aws_iam.PolicyStatement({
+        actions: [
+          'ssm:GetParametersByPath',
+          'ssm:GetParameters',
+          'ssm:GetParameter',
+        ],
+        resources: [tokenConfigParam.parameterArn],
+      }),
+    );
   }
 }
