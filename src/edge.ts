@@ -34,16 +34,49 @@ export const handler: CloudFrontRequestHandler = async (event, context) => {
   // validate token existance and format
   const authorization = cf.request.headers.authorization;
   console.log('authorization', authorization);
-  /*
-  assert(
-    authorization && authorization[0].value,
-    "authorization header is missing"
-  );
-  assert(
-    authorization[0].value.startsWith("Bearer"),
-    "authorization header is not bearer"
-  );
-  */
+
+  // validations
+  if (authorization && authorization[0].value) {
+    return {
+      status: '401',
+      headers: {
+        'cache-control': [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, max-age=0, must-revalidate',
+          },
+        ],
+        'pragma': [
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+        ],
+      },
+      body: 'Not Authorized - authorization header is missing',
+    };
+  }
+
+  if (authorization[0].value.startsWith('Bearerd')) {
+    return {
+      status: '401',
+      headers: {
+        'cache-control': [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, max-age=0, must-revalidate',
+          },
+        ],
+        'pragma': [
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+        ],
+      },
+      body: 'Not Authorized - authorization header is not bearer',
+    };
+  }
 
   // token match!
   if (tokenValue === authorization[0].value.split(' ')[1]) {

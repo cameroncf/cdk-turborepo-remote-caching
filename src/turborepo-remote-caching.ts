@@ -203,7 +203,7 @@ export class TurborepoRemoteCaching extends Construct {
       tokenValue,
     };
 
-    const tokenConfigParam = new StringParameter(this, 'TokenConfig', {
+    new StringParameter(this, 'TokenConfig', {
       description:
         'GENERATED VALUE DO NOT CHANGE - Configuration for TurboRepo Support',
       parameterName,
@@ -217,7 +217,7 @@ export class TurborepoRemoteCaching extends Construct {
           'ssm:GetParameters',
           'ssm:GetParameter',
         ],
-        // resources: [tokenConfigParam.parameterArn], <-- don't use this style, it creates a circular dependancy.
+        // resources: [tokenConfigParam.parameterArn], <-- don't use this syntax for arn, it creates a circular dependancy.
         resources: [`arn:aws:ssm:${region}:${account}:parameter${parameterName}`],
       }),
     );
