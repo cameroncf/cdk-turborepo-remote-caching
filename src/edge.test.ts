@@ -36,6 +36,7 @@ describe('Init Config', () => {
     const result = await initTokenConfig(ssmParamName, {
       tokenStorage: TokenStorage.PARAMETER_STORE,
       remoteApiEndpoint: 'foo',
+      tokenValue: 'bar',
     });
     expect(result).toBe(false);
   });
@@ -43,15 +44,13 @@ describe('Init Config', () => {
 
 describe('Init Value', () => {
   it("should retrieve value if it's undefined", async () => {
-    const ssmParamName = 'foo';
     let tokenValue: string;
-    const result = await initTokenValue(ssmParamName, tokenValue!);
+    const result = await initTokenValue(tokenValue!);
     expect(result).toBe(true);
   });
 
   it("should not update value if it's already defined", async () => {
-    const ssmParamName = 'foo';
-    const result = await initTokenValue(ssmParamName, 'foo-bar-baz');
+    const result = await initTokenValue('foo-bar-baz');
     expect(result).toBe(false);
   });
 });

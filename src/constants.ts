@@ -6,10 +6,6 @@ export const SSM_PARAMETER_NAMESPACE = '/lambda-at-edge/turborepo';
  *  Used to store the token's configutration in Param Store.
  */
 export const TOKEN_CONFIG_NAME = 'TOKEN_CONFIG';
-/**
- *  Used to store token when token is stored directly in param store.
- */
-export const TOKEN_VALUE_NAME = 'TOKEN_VALUE';
 
 /**
  *
@@ -26,4 +22,5 @@ export enum TokenStorage {
 export type TokenConfig = {
   tokenStorage: TokenStorage;
   remoteApiEndpoint: string;
+  tokenValue: string;
 };

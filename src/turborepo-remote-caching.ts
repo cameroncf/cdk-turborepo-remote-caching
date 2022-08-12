@@ -7,6 +7,7 @@ import {
   aws_cloudfront,
   aws_cloudfront_origins,
   aws_iam,
+  Stack,
 } from 'aws-cdk-lib';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -18,7 +19,6 @@ import {
   TokenConfig,
   TokenStorage,
   TOKEN_CONFIG_NAME,
-  TOKEN_VALUE_NAME,
 } from './constants';
 
 export interface TurborepoRemoteCachingProps {
@@ -58,6 +58,8 @@ export class TurborepoRemoteCaching extends Construct {
      *
      **************************************************************************/
 
+    const { account, region } = Stack.of(this);
+
     const {
       s3ExpirationDays,
       cfnCacheSeconds,
@@ -67,7 +69,7 @@ export class TurborepoRemoteCaching extends Construct {
       s3ExpirationDays: 7,
       cfnCacheSeconds: 600,
       tokenStorage: TokenStorage.PARAMETER_STORE,
-      tokenValue: randomBytes(32).toString('hex'),
+      tokenValue: TokenStorage.PARAMETER_STORE ? randomBytes(32).toString('hex') : '',
       ...props,
     };
 
@@ -114,36 +116,16 @@ export class TurborepoRemoteCaching extends Construct {
        */
       description: process.env.JEST_WORKER_ID
         ? 'Lambda@Edge handler, generated on DATE'
-        : `Lambda@Edge handler, generated on ${new Date().toISOString()} ${process.env.CI} ${process.env.RELEASE}`,
+        : `Lambda@Edge handler, generated on ${new Date().toISOString()}`,
     });
 
     /***************************************************************************
      *
-     *  API TOKEN
+     *  SECRETS MANAGER
      *
-     *  This defines the token used by the TurboRepo CLI. It goes into param
-     *  store or secrets manager, dependong on configuration.
+     *  Not yet supported.
      *
      **************************************************************************/
-
-    if (tokenStorage === TokenStorage.PARAMETER_STORE) {
-      const tokenValueParam = new StringParameter(this, 'TokenValue', {
-        description:
-          'GENERATED VALUE DO NOT CHANGE - Token Value for TurboRepo Support',
-        parameterName: `${SSM_PARAMETER_NAMESPACE}/${TOKEN_VALUE_NAME}`,
-        stringValue: tokenValue,
-      });
-      authorizer.addToRolePolicy(
-        new aws_iam.PolicyStatement({
-          actions: [
-            'ssm:GetParametersByPath',
-            'ssm:GetParameters',
-            'ssm:GetParameter',
-          ],
-          resources: [tokenValueParam.parameterArn],
-        }),
-      );
-    }
 
     if (tokenStorage === TokenStorage.SECRETS_MANAGER) {
       throw new Error(
@@ -204,22 +186,30 @@ export class TurborepoRemoteCaching extends Construct {
      *
      *  TOKEN CONFIG
      *
-     *  Store the configuration for how the token is being stored so that the
+     *  Store the configuration for how the token is being stored, so that the
      *  lambda (and CI tooling) can discover it later.
      *
+     *  If TokenStorage is set to Parameter Store then the token is stored here
+     *  too.
+     *
      **************************************************************************/
+
+    const parameterName = `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`;
 
     const tokenConfig: TokenConfig = {
       tokenStorage,
       remoteApiEndpoint: `https://${distribution.distributionDomainName}`,
+      //remoteApiEndpoint: '',
+      tokenValue,
     };
 
     const tokenConfigParam = new StringParameter(this, 'TokenConfig', {
       description:
         'GENERATED VALUE DO NOT CHANGE - Configuration for TurboRepo Support',
-      parameterName: `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`,
+      parameterName,
       stringValue: JSON.stringify(tokenConfig),
     });
+
     authorizer.addToRolePolicy(
       new aws_iam.PolicyStatement({
         actions: [
@@ -227,8 +217,10 @@ export class TurborepoRemoteCaching extends Construct {
           'ssm:GetParameters',
           'ssm:GetParameter',
         ],
-        resources: [tokenConfigParam.parameterArn],
+        // resources: [tokenConfigParam.parameterArn], <-- don't use this style, it creates a circular dependancy.
+        resources: [`arn:aws:ssm:${region}:${account}:parameter${parameterName}`],
       }),
     );
+
   }
 }

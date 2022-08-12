@@ -3,8 +3,8 @@ import type { CloudFrontRequestHandler } from 'aws-lambda';
 import {
   SSM_PARAMETER_NAMESPACE,
   TokenConfig,
+  TokenStorage,
   TOKEN_CONFIG_NAME,
-  TOKEN_VALUE_NAME,
 } from './constants';
 
 /**
@@ -21,13 +21,12 @@ export const handler: CloudFrontRequestHandler = async (event, context) => {
 
   // discover the param name that stores the configuration
   const ssmConfigParamName = `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`;
-  const ssmValueParamName = `${SSM_PARAMETER_NAMESPACE}/${TOKEN_VALUE_NAME}`;
 
   // init the configuration, if needed
   await initTokenConfig(ssmConfigParamName, tokenConfig);
 
-  // retrieve token value, if needed
-  await initTokenValue(ssmValueParamName, tokenValue);
+  // get the token secret value
+  await initTokenValue(tokenValue);
 
   // pull cf request out of viewer event
   const { cf } = event.Records[0];
@@ -100,26 +99,14 @@ export const initTokenConfig = async (
 };
 
 export const initTokenValue = async (
-  ssmValueParamName: string,
   currentValue?: string,
 ): Promise<boolean> => {
   if (currentValue === undefined) {
-    const ssmClient = new SSMClient({ region: 'us-east-1' });
-    const getParameterCommand = new GetParameterCommand({
-      Name: ssmValueParamName,
-    });
-    const response = await ssmClient.send(getParameterCommand);
 
-    // nothing was returned
-    if (!response.Parameter?.Value) {
-      throw new Error(
-        `The token value parameter named ${ssmValueParamName} was not found in param store`,
-      );
+    // if might be in the config already
+    if (tokenConfig.tokenStorage === TokenStorage.PARAMETER_STORE) {
+      tokenValue = tokenConfig.tokenValue;
     }
-
-    // set configuration to global scope here
-    tokenValue = response.Parameter.Value;
-    console.log('tokenValue', JSON.stringify(tokenValue, null, 2));
     return true;
   }
   return false;
