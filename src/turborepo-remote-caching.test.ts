@@ -1,6 +1,7 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Capture, Template } from 'aws-cdk-lib/assertions';
 import { TurborepoRemoteCaching, TurborepoRemoteCachingProps } from '../src/turborepo-remote-caching';
+import { TokenStorage } from './constants';
 
 describe('S3 Lifecycle Rules', () => {
 
@@ -31,8 +32,8 @@ describe('S3 Lifecycle Rules', () => {
   });
 
   test('Cache expiration should be configurable', () => {
-    const expirationDays = 33;
-    const template = templateHarness({ expirationDays });
+    const s3ExpirationDays = 33;
+    const template = templateHarness({ s3ExpirationDays });
 
     const lifecycleRules = new Capture();
     template.hasResourceProperties('AWS::S3::Bucket', {
@@ -41,10 +42,15 @@ describe('S3 Lifecycle Rules', () => {
       },
     });
 
-    expect(lifecycleRules.asArray()[0].ExpirationInDays).toBe(expirationDays);
-
+    expect(lifecycleRules.asArray()[0].ExpirationInDays).toBe(s3ExpirationDays);
   });
 
+});
+
+describe('Secrets Manager', () => {
+  test('should not yet be supported', () => {
+    expect(() => { templateHarness({ tokenStorage: TokenStorage.SECRETS_MANAGER }); }).toThrowError();
+  });
 });
 
 

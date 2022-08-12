@@ -7,7 +7,6 @@ import {
   aws_cloudfront,
   aws_cloudfront_origins,
   aws_iam,
-  Stack,
 } from 'aws-cdk-lib';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -25,10 +24,10 @@ import {
 
 export interface TurborepoRemoteCachingProps {
   /**
-   *  How may days till cached items expire.
+   *  How may days till cached items expire in S3 Bucket
    *  Default: 7
    */
-  readonly expirationDays?: number;
+  readonly s3ExpirationDays?: number;
   /**
    *  How many seconds should CloudFront cache objects?
    *  Default: 600
@@ -36,14 +35,14 @@ export interface TurborepoRemoteCachingProps {
   readonly cfnCacheSeconds?: number;
   /**
    *  What method of storage should be used to store the token?
-   *  Defaults to Parameter Store
+   *  Default: TokenStorage.PARAMETER_STORE
    */
   readonly tokenStorage?: TokenStorage;
   /**
-   *  If stored in secrets manager, how often should the key be rotated?
-   *  Defaults to 1440 (one day)
+   *  What should the token value be?
+   *  Default: Generated - Random 32 char string
    */
-  readonly tokenRotationMinutes?: number;
+  readonly tokenValue?: string;
 }
 
 export class TurborepoRemoteCaching extends Construct {
@@ -60,22 +59,16 @@ export class TurborepoRemoteCaching extends Construct {
      *
      **************************************************************************/
 
-    const { region } = Stack.of(this);
-
     const {
-      expirationDays,
+      s3ExpirationDays,
       cfnCacheSeconds,
       tokenStorage,
-      tokenSecretRotationMinutes,
-      tokenSecretName,
-      tokenSecretRegion,
+      tokenValue,
     } = {
-      expirationDays: 7,
+      s3ExpirationDays: 7,
       cfnCacheSeconds: 600,
       tokenStorage: TokenStorage.PARAMETER_STORE,
-      tokenSecretRotationMinutes: 1440,
-      tokenSecretName: 'turborepo-token-secret',
-      tokenSecretRegion: region,
+      tokenValue: randomBytes(32).toString('hex'),
       ...props,
     };
 
@@ -99,7 +92,7 @@ export class TurborepoRemoteCaching extends Construct {
       lifecycleRules: [
         {
           abortIncompleteMultipartUploadAfter: Duration.days(1),
-          expiration: Duration.days(expirationDays),
+          expiration: Duration.days(s3ExpirationDays),
         },
       ],
     });
@@ -120,7 +113,7 @@ export class TurborepoRemoteCaching extends Construct {
       /**
        * See: https://github.com/aws/aws-cdk/issues/5334
        */
-      description: process.env.NODE_ENV === 'test'
+      description: process.env.JEST_WORKER_ID
         ? 'Lambda@Edge handler, generated on DATE'
         : `Lambda@Edge handler, generated on ${new Date().toISOString()} ${process.env.CI} ${process.env.RELEASE}`,
     });
@@ -136,9 +129,6 @@ export class TurborepoRemoteCaching extends Construct {
 
     const tokenConfig: TokenConfig = {
       tokenStorage,
-      tokenSecretRotationMinutes,
-      tokenSecretName,
-      tokenSecretRegion,
     };
 
     const tokenConfigParam = new StringParameter(this, 'TokenConfig', {
@@ -172,7 +162,7 @@ export class TurborepoRemoteCaching extends Construct {
         description:
           'GENERATED VALUE DO NOT CHANGE - Token Value for TurboRepo Support',
         parameterName: `${SSM_PARAMETER_NAMESPACE}/${TOKEN_VALUE_NAME}`,
-        stringValue: randomBytes(64).toString('hex'),
+        stringValue: tokenValue,
       });
       authorizer.addToRolePolicy(
         new aws_iam.PolicyStatement({

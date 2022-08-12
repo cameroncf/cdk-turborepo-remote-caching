@@ -29,17 +29,4 @@ export enum TokenStorage {
  */
 export type TokenConfig = {
   tokenStorage: TokenStorage;
-  /**
-   *  If stored in secret manager, how often is the secret rotated?
-   *  Defaults to 1440 (daily rotation)
-   */
-  tokenSecretRotationMinutes: number;
-  /**
-   * If stored in secret manager, what is the name of the secret?
-   */
-  tokenSecretName: string;
-  /**
-   * If stored in secret manager, what is the region of the secret?
-   */
-  tokenSecretRegion: string;
 };

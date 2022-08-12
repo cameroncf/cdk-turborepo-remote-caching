@@ -14,9 +14,6 @@ jest.mock('@aws-sdk/client-ssm', () => {
             Parameter: {
               Value: JSON.stringify({
                 tokenStorage: TokenStorage.PARAMETER_STORE,
-                tokenSecretRotationMinutes: 1440,
-                tokenSecretName: 'foo',
-                tokenSecretRegion: 'bar',
               }),
             },
           });
@@ -38,9 +35,6 @@ describe('Init Config', () => {
     const ssmParamName = 'foo';
     const result = await initTokenConfig(ssmParamName, {
       tokenStorage: TokenStorage.PARAMETER_STORE,
-      tokenSecretRotationMinutes: 1440,
-      tokenSecretName: 'foo',
-      tokenSecretRegion: 'bar',
     });
     expect(result).toBe(false);
   });
