@@ -11,6 +11,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   devDeps: ['aws-cdk', 'turbo', '@types/aws-lambda'],
   deps: ['jose', 'aws-sdk', 'esbuild', '@aws-sdk/client-ssm'],
   depsUpgrade: false,
+  integrationTestAutoDiscover: false,
   testdir: 'src',
 });
 
