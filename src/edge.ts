@@ -6,6 +6,7 @@ import {
   TokenStorage,
   TOKEN_CONFIG_NAME,
 } from './constants';
+import { unauthResponse } from './util/error-response';
 
 /**
  *  Allow token data to persist between lambda executions to prevent request to
@@ -37,71 +38,19 @@ export const handler: CloudFrontRequestHandler = async (event, context) => {
 
   // validations
   if (authorization && authorization[0].value) {
-    return {
-      status: '401',
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, max-age=0, must-revalidate',
-          },
-        ],
-        'pragma': [
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-        ],
-      },
-      body: 'Not Authorized - authorization header is missing',
-    };
+    return unauthResponse('missing authorization header');
   }
-
   if (authorization[0].value.startsWith('Bearerd')) {
-    return {
-      status: '401',
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, max-age=0, must-revalidate',
-          },
-        ],
-        'pragma': [
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-        ],
-      },
-      body: 'Not Authorized - authorization header is not bearer',
-    };
+    return unauthResponse('authorization header nor bearer');
   }
 
-  // token match!
-  if (tokenValue === authorization[0].value.split(' ')[1]) {
-    return cf.request;
+  // token match?
+  if (tokenValue !== authorization[0].value.split(' ')[1]) {
+    return unauthResponse();
   }
 
-  // bad token! bad! very bad!
-  return {
-    status: '401',
-    headers: {
-      'cache-control': [
-        {
-          key: 'Cache-Control',
-          value: 'no-cache, no-store, max-age=0, must-revalidate',
-        },
-      ],
-      'pragma': [
-        {
-          key: 'Pragma',
-          value: 'no-cache',
-        },
-      ],
-    },
-    body: 'Not Authorized.',
-  };
+  // if we reached this point, we're all good!
+  return cf.request;
 };
 
 export const initTokenConfig = async (
