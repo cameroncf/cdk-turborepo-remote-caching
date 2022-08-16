@@ -3,7 +3,7 @@ import { awscdk } from 'projen';
 const project = new awscdk.AwsCdkConstructLibrary({
   author: 'Roman Filippov',
   authorAddress: 'rf@romanfilippov.com',
-  cdkVersion: '2.31.1',
+  cdkVersion: '2.37.1',
   defaultReleaseBranch: 'main',
   name: 'cdk-turborepo-remote-caching',
   projenrcTs: true,
