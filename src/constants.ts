@@ -24,3 +24,13 @@ export type TokenConfig = {
   remoteApiEndpoint: string;
   tokenValue: string;
 };
+
+
+/**
+ * Error Messages
+ */
+
+export const ERROR_AUTH_HEADER_MISSING = 'Not Authorized - missing authorization header';
+export const ERROR_AUTH_HEADER_NOT_BEARER = 'Not Authorized - authorization header not bearer';
+export const ERROR_AUTH_HEADER_FAILED = 'Not Authorized - authorization failed';
+export const ERROR_PARAM_STORE_CONFIG = 'Failed to Param Store value';

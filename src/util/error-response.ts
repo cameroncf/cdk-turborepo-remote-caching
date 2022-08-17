@@ -1,7 +1,6 @@
+import { CloudFrontResultResponse } from 'aws-lambda';
 
-
-export const unauthResponse = (message?: string) => {
-  const body = message ? `Not Authorized - ${message}` : 'Not Authorized';
+export const unauthResponse = (message: string): CloudFrontResultResponse => {
   return {
     status: '401',
     headers: {
@@ -18,6 +17,7 @@ export const unauthResponse = (message?: string) => {
         },
       ],
     },
-    body,
+    body: message,
   };
 };
+

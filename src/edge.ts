@@ -1,6 +1,10 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import type { CloudFrontRequestHandler } from 'aws-lambda';
 import {
+  ERROR_AUTH_HEADER_FAILED,
+  ERROR_AUTH_HEADER_MISSING,
+  ERROR_AUTH_HEADER_NOT_BEARER,
+  ERROR_PARAM_STORE_CONFIG,
   SSM_PARAMETER_NAMESPACE,
   TokenConfig,
   TokenStorage,
@@ -24,7 +28,11 @@ export const handler: CloudFrontRequestHandler = async (event, context) => {
   const ssmConfigParamName = `${SSM_PARAMETER_NAMESPACE}/${TOKEN_CONFIG_NAME}`;
 
   // init the configuration, if needed
-  await initTokenConfig(ssmConfigParamName, tokenConfig);
+  try {
+    await initTokenConfig(ssmConfigParamName, tokenConfig);
+  } catch (e) {
+    unauthResponse(ERROR_PARAM_STORE_CONFIG);
+  }
 
   // get the token secret value
   await initTokenValue(tokenValue);
@@ -34,19 +42,18 @@ export const handler: CloudFrontRequestHandler = async (event, context) => {
 
   // validate token existance and format
   const authorization = cf.request.headers.authorization;
-  console.log('authorization', authorization);
 
   // validations
-  if (authorization && authorization[0].value) {
-    return unauthResponse('missing authorization header');
+  if (authorization === undefined || authorization[0]?.value === undefined) {
+    return unauthResponse(ERROR_AUTH_HEADER_MISSING);
   }
-  if (authorization[0].value.startsWith('Bearerd')) {
-    return unauthResponse('authorization header nor bearer');
+  if (!authorization[0].value.startsWith('Bearer')) {
+    return unauthResponse(ERROR_AUTH_HEADER_NOT_BEARER);
   }
 
   // token match?
   if (tokenValue !== authorization[0].value.split(' ')[1]) {
-    return unauthResponse();
+    return unauthResponse(ERROR_AUTH_HEADER_FAILED);
   }
 
   // if we reached this point, we're all good!
@@ -62,13 +69,12 @@ export const initTokenConfig = async (
     const getParameterCommand = new GetParameterCommand({
       Name: ssmConfigParamName,
     });
+
     const response = await ssmClient.send(getParameterCommand);
 
     // nothing was returned
     if (!response.Parameter?.Value) {
-      throw new Error(
-        `The configuration parameter named ${ssmConfigParamName} was not found in param store`,
-      );
+      throw new Error(ERROR_PARAM_STORE_CONFIG);
     }
 
     // set configuration to global scope here
